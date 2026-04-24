@@ -11,12 +11,8 @@
 #include <ESPAsyncWebServer.h> // ESP Async WebServer by ESP32Async
 #include <AsyncTCP.h> // Async TCP by ESP32Async
 #include <Preferences.h>
-#include "Moon.h"
-#include "Nameday_cz.h"
 #include "Ics.h"
 #include "Fonts/fontinc.h"
-#include <Fonts/FreeSans18pt7b.h>
-#include <Fonts/FreeSerif9pt7b.h>
 
 // ===== ICS =====
 float lat = 0;
@@ -229,7 +225,7 @@ const unsigned char thermo[] PROGMEM = {
 };
 
 
-struct tm timeinfo;
+struct tm timeinfo; // globalni casovy udaj
 
 
 struct Rect 
@@ -254,6 +250,32 @@ struct DayResult
   float rain_mm;  
   bool valid;
 };
+
+
+struct Area 
+{
+  int16_t x;
+  int16_t y;
+  int16_t w;
+  int16_t h;
+};
+
+
+struct LayoutResult 
+{
+  Area top;
+  Area bottom;
+};
+
+
+struct DayInfo 
+{
+  String dayName;
+  String dayFull;
+  String dayNumber;
+  String monthName;
+};
+
 
 
 #define ICON_SUNNY          0
@@ -505,7 +527,6 @@ void deleteWiFi(int id)
     prefs.end();
 }
 
-// ===== WIFI CONNECT =====
 bool connectBestWiFi() 
 {
     WiFi.mode(WIFI_STA);
@@ -561,7 +582,6 @@ bool hasConfig()
 }
 
 
-// ===== CONFIG MODE =====
 void startConfig() 
 {
     WiFi.softAP("Kalendář-Setup");
@@ -637,7 +657,7 @@ void clearConfig()
 void syncTime()
 {
   Serial.println("Sync time...");
-  MoonCalc::initTime();
+  configTime(3600, 3600, "cz.pool.ntp.org");
   while (!getLocalTime(&timeinfo)) delay(200);
   int y=timeinfo.tm_year+1900;
   int m=timeinfo.tm_mon+1;
@@ -693,6 +713,142 @@ bool hasWiFi()
         if (ssidList[i] != "") return true;
     }
     return false;
+}
+
+static String toHHMM(double t)
+{
+  int h = (int)t;
+  int m = (int)((t - h) * 60 + 0.5);
+  if (m >= 60) { m -= 60; h++; }
+  if (h >= 24) h -= 24;
+  char buf[6];
+  sprintf(buf, "%02d:%02d", h, m);
+  return String(buf);
+}
+
+
+String twoDigitsFromText(String value)
+{
+  return (value.length() < 2) ? "0" + value : value;
+}
+
+
+String twoDigits(int value)
+{
+  return (value < 10) ? "0" + String(value) : String(value);
+}
+
+
+static bool CalcSun(double lat, double lon, String &sunriseStr, String &sunsetStr)
+{
+  struct tm t;
+  if (!getLocalTime(&t)) return false;
+  int y = t.tm_year + 1900;
+  int m = t.tm_mon + 1;
+  int d = t.tm_mday;
+  int tz = t.tm_isdst ? 2 : 1;
+  int N1 = floor(275 * m / 9);
+  int N2 = floor((m + 9) / 12);
+  int N3 = (1 + floor((y - 4 * floor(y / 4) + 2) / 3));
+  int N = N1 - (N2 * N3) + d - 30;
+  double lngHour = lon / 15.0;
+  auto calc = [&](bool sunrise)
+  {
+    double t0 = N + ((sunrise ? 6 : 18) - lngHour) / 24.0;
+    double M = (0.9856 * t0) - 3.289;
+    double L = M + 1.916*sin(M*DEG_TO_RAD)
+                + 0.020*sin(2*M*DEG_TO_RAD)
+                + 282.634;
+    L = fmod(L, 360);
+    double RA = atan(0.91764 * tan(L*DEG_TO_RAD)) * RAD_TO_DEG;
+    RA = fmod(RA, 360);
+    double sinDec = 0.39782 * sin(L*DEG_TO_RAD);
+    double cosDec = cos(asin(sinDec));
+    double cosH = (cos(90.833*DEG_TO_RAD) -
+                  (sinDec * sin(lat*DEG_TO_RAD))) /
+                  (cosDec * cos(lat*DEG_TO_RAD));
+    if (cosH > 1 || cosH < -1) return -1.0;
+    double H = sunrise ? (360 - acos(cosH)*RAD_TO_DEG)
+                      : (acos(cosH)*RAD_TO_DEG);
+    H /= 15.0;
+    double T = H + RA/15 - (0.06571 * t0) - 6.622;
+    double UT = T - lngHour;
+    return UT;
+  };
+  double riseUTC = calc(true);
+  double setUTC  = calc(false);
+  double rise = riseUTC + tz;
+  double set  = setUTC  + tz;
+  if (rise < 0) rise += 24;
+  if (set  < 0) set  += 24;
+  if (rise >= 24) rise -= 24;
+  if (set  >= 24) set  -= 24;
+  sunriseStr = toHHMM(rise);
+  sunsetStr  = toHHMM(set);
+  return true;
+}  
+
+
+bool CalcSunFromAPI(double lat, double lon, String &sunriseStr, String &sunsetStr)
+{
+  HTTPClient http;
+  String url = "https://api.open-meteo.com/v1/forecast?";
+  url += "latitude=" + String(lat,6);
+  url += "&longitude=" + String(lon,6);
+  url += "&daily=sunrise,sunset";
+  url += "&timezone=Europe%2FPrague";
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode != 200) {
+    http.end();
+    return false;
+  }
+  String payload = http.getString();
+  http.end();
+  StaticJsonDocument<2048> doc;
+  DeserializationError err = deserializeJson(doc, payload);
+  if (err) return false;
+  String sunrise = doc["daily"]["sunrise"][0];
+  String sunset  = doc["daily"]["sunset"][0];
+  sunriseStr = sunrise.substring(11,16);
+  sunsetStr  = sunset.substring(11,16);
+  return true;
+}  
+
+
+String getNameDayCZ(int day, int month, int year) 
+{
+  HTTPClient http;
+  char dateStr[11];
+  sprintf(dateStr, "%04d-%02d-%02d", year, month, day);
+  String url = "https://svatkyapi.cz/api/day/" + String(dateStr);  
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode != 200) 
+  {
+    http.end();
+    Serial.println("GetNameDay > Chyba API");
+    return " ";
+  }
+  String payload = http.getString();
+  http.end();
+  DynamicJsonDocument doc(512);
+  DeserializationError error = deserializeJson(doc, payload);
+  if (error) 
+  {
+    Serial.println("GetNameDay > Chyba JSON");
+    return " ";
+  }
+  if (doc.containsKey("name")) 
+  {
+    return String((const char*)doc["name"]);
+  }
+  if (doc.containsKey("svatek")) 
+  {
+    return String((const char*)doc["svatek"]);
+  }
+  Serial.println("GetNameDay > Neznama chyba");
+  return " ";
 }
 
 
@@ -908,75 +1064,20 @@ int getTextWidthCZ(const char* text, const GFXfont* font)
 }
 
 
-bool CalcSunFromAPI(double lat, double lon, String &sunriseStr, String &sunsetStr)
+DayInfo getDayInfo(struct tm timeinfo)
 {
-  HTTPClient http;
-  String url = "https://api.open-meteo.com/v1/forecast?";
-  url += "latitude=" + String(lat,6);
-  url += "&longitude=" + String(lon,6);
-  url += "&daily=sunrise,sunset";
-  url += "&timezone=Europe%2FPrague";
-  http.begin(url);
-  int httpCode = http.GET();
-  if (httpCode != 200) {
-    http.end();
-    return false;
-  }
-  String payload = http.getString();
-  http.end();
-  StaticJsonDocument<2048> doc;
-  DeserializationError err = deserializeJson(doc, payload);
-  if (err) return false;
-  String sunrise = doc["daily"]["sunrise"][0];
-  String sunset  = doc["daily"]["sunset"][0];
-  sunriseStr = sunrise.substring(11,16);
-  sunsetStr  = sunset.substring(11,16);
-  return true;
-}  
-
-
-static String toHHMM(double t)
-{
-  int h = (int)t;
-  int m = (int)((t - h) * 60 + 0.5);
-  if (m >= 60) { m -= 60; h++; }
-  if (h >= 24) h -= 24;
-  char buf[6];
-  sprintf(buf, "%02d:%02d", h, m);
-  return String(buf);
-}
-
-
-String formatTime(String input)
-{
-  int colon = input.indexOf(':');
-  if (colon == -1) return input;
-  int hour = input.substring(0, colon).toInt();
-  int minute = input.substring(colon + 1).toInt();
-  char buffer[6];
-  sprintf(buffer, "%02d:%02d", hour, minute);
-  return String(buffer);
-}
-
-
-String twoDigitsFromText(String value)
-{
-  return (value.length() < 2) ? "0" + value : value;
-}
-
-
-String twoDigits(int value)
-{
-  return (value < 10) ? "0" + String(value) : String(value);
-}
-
-
-void drawTextCentered(const Rect& r, const char* text, int textW, int textH)
-{
-    int x = r.x + (r.w - textW) / 2;
-    int y = r.y + (r.h - textH) / 2 + textH;
-    display.setCursor(x, y);
-    printCZ(text);
+    DayInfo info;
+    const char* days[] = {"Ne", "Po", "Út", "St", "Čt", "Pá", "So"};
+    const char* daysFull[] = {"Neděle", "Pondělí", "Úterý", "Středa", "Čtvrtek", "Pátek", "Sobota"};
+    const char* months[] = {
+        "LEDEN", "ÚNOR", "BŘEZEN", "DUBEN", "KVĚTEN", "ČERVEN",
+        "ČERVENEC", "SRPEN", "ZÁŘÍ", "ŘÍJEN", "LISTOPAD", "PROSINEC"
+    };
+    info.dayName = days[timeinfo.tm_wday];
+    info.dayFull = daysFull[timeinfo.tm_wday];
+    info.dayNumber = String(timeinfo.tm_mday);
+    info.monthName = months[timeinfo.tm_mon];
+    return info;
 }
 
 
@@ -1094,14 +1195,43 @@ bool getWeatherForDay(float lat, float lon, tm timeinfo, DayResult &out)
 
 
 
-void addDays(struct tm &date, int days)
+void drawDayNameAndNumber()
 {
-    time_t t = mktime(&date);
-    t += days * 86400;
-    localtime_r(&t, &date);
+  DayInfo d = getDayInfo(timeinfo);
+  display.setFont(&LexendPeta_Medium);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(20, 80);
+  printCZ(String(d.dayFull).c_str());
+
+  display.setFont(&IBMPlexSerif_Medium);
+  display.setCursor(320, 150);
+  display.print(String(d.dayNumber).c_str());
+
+  display.setFont(&Inter_24pt_Bold);
+  display.setCursor(25, 150);
+  printCZ(String(d.monthName).c_str());
+
 }
 
 
+
+void drawAll()
+{
+    display.setFullWindow();
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        /// BEGIN DRAW
+
+        drawDayNameAndNumber();
+
+        /// END DRAW
+    } while (display.nextPage());
+}
+
+
+
+/*
 void drawRow(const Rect& rect, const struct tm& date, const char* event1, const char* event2)
 {
   Rect partRect[4];
@@ -1296,8 +1426,9 @@ void drawRow(const Rect& rect, const struct tm& date, const char* event1, const 
     printCZ(thermoText.c_str());
   }
 }
+*/
 
-
+/*
 void drawAll(struct tm timeinfo)
 {
   const char* namemonth[12] = 
@@ -1465,12 +1596,12 @@ void drawAll(struct tm timeinfo)
   }
   while(display.nextPage());
 }
+*/
 
 
 void setup()
 {
   Serial.begin(115200);
-
   pinMode(RESET_PIN, INPUT_PULLUP);
   pinMode(CLEAR_PIN, INPUT_PULLUP);
   loadConfig();
@@ -1537,20 +1668,18 @@ void setup()
 
   digitalWrite(CS_PIN, HIGH);
 
-  // RESET
   digitalWrite(RST_PIN, LOW);
   delay(20);
   digitalWrite(RST_PIN, HIGH);
   delay(20);
 
-  // INIT
   display.init(115200);
 
   Serial.println("INIT DISPLAY DONE");
 
   Serial.println("DRAWING...");
   display.setRotation(1);
-  drawAll(timeinfo);
+  drawAll();
   display.hibernate();
   Serial.println("DRAW DONE");
 
