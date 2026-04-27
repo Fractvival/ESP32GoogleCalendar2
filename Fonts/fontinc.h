@@ -1,0 +1,20 @@
+// auto-generated file
+#pragma once
+
+#include "Fonts/IBMPlexSerif_Medium.f"
+#include "Fonts/Inter_24pt_Bold.f"
+#include "Fonts/Inter_Medium10.f"
+#include "Fonts/Inter_Medium11.f"
+#include "Fonts/Inter_Medium12.f"
+#include "Fonts/Inter_Medium5.f"
+#include "Fonts/LexendDeca_Light5.f"
+#include "Fonts/LexendDeca_Regular12.f"
+#include "Fonts/LexendPeta_Medium.f"
+#include "Fonts/Lexend_Regular10.f"
+#include "Fonts/OpenSans_Condensed_Medium10.f"
+#include "Fonts/OpenSans_Condensed_SemiBold15.f"
+#include "Fonts/OpenSans_Light18.f"
+#include "Fonts/OpenSans_Medium8.f"
+#include "Fonts/OpenSans_SemiCondensed_Bold10.f"
+#include "Fonts/Roboto_Condensed_Regular12.f"
+#include "Fonts/Roboto_Condensed_Regular13.f"

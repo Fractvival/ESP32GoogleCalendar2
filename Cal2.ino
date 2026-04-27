@@ -12,12 +12,17 @@
 #include <AsyncTCP.h> // Async TCP by ESP32Async
 #include <Preferences.h>
 #include "Ics.h"
+#include "Icons.h"
 #include "Fonts/fontinc.h"
 
 // ===== ICS =====
 float lat = 0;
 float lon = 0;
 String ics = "";
+String nameDay = "";
+String sunRise = "";
+String sunSet = "";
+
 
 #define CLEAR_PIN 4 // smaze komplet nastaveni
 #define RESET_PIN 2 // reset desky ESP32
@@ -30,199 +35,6 @@ String ics = "";
 GxEPD2_3C<GxEPD2_750c_Z08, GxEPD2_750c_Z08::HEIGHT> display(
   GxEPD2_750c_Z08(CS_PIN, DC_PIN, RST_PIN, BUSY_PIN)
 );
-
-const unsigned char sunIcon[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x0c, 0x18, 0x30, 0x0e, 
-	0x00, 0x70, 0x07, 0x7e, 0xe0, 0x02, 0xff, 0x40, 0x01, 0xe7, 0x80, 0x03, 0x81, 0xc0, 0x03, 0x81, 
-	0xc0, 0x7b, 0x00, 0xde, 0x7b, 0x00, 0xde, 0x03, 0x81, 0xc0, 0x03, 0x81, 0xc0, 0x01, 0xe7, 0x80, 
-	0x02, 0xff, 0x40, 0x07, 0x7e, 0xe0, 0x0e, 0x00, 0x70, 0x1c, 0x18, 0x30, 0x08, 0x18, 0x00, 0x00, 
-	0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char moonIcon[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xf8, 0x00, 0x0f, 0xfe, 0x00, 0x03, 0x9f, 0x80, 0x01, 
-	0xc3, 0x80, 0x01, 0xc1, 0xc0, 0x00, 0xe0, 0xe0, 0x00, 0x60, 0xe0, 0x00, 0x70, 0x60, 0x00, 0x70, 
-	0x70, 0x00, 0x70, 0x70, 0x00, 0x70, 0x70, 0x00, 0x70, 0x70, 0x00, 0x60, 0x60, 0x00, 0x60, 0xe0, 
-	0x00, 0xe0, 0xe0, 0x01, 0xc1, 0xc0, 0x01, 0xc3, 0x80, 0x03, 0x9f, 0x00, 0x0f, 0xfe, 0x00, 0x03, 
-	0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char isMoon[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x03, 0xc0, 0x00, 0x07, 0xc0, 0x00, 0x0f, 
-	0xc0, 0x00, 0x1c, 0xe0, 0x00, 0x1c, 0xe0, 0x00, 0x38, 0x70, 0x00, 0x38, 0x70, 0x00, 0x30, 0x38, 
-	0x00, 0x30, 0x3c, 0x00, 0x30, 0x1f, 0x00, 0x30, 0x0f, 0xc0, 0x38, 0x03, 0xfc, 0x38, 0x00, 0xfc, 
-	0x1c, 0x00, 0x38, 0x1e, 0x00, 0x38, 0x0f, 0x00, 0xf0, 0x07, 0xc3, 0xe0, 0x03, 0xff, 0xc0, 0x00, 
-	0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char noMoon[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc0, 0x00, 0x03, 0xc0, 0x00, 0x47, 0xc0, 0x00, 0xe7, 
-	0xc0, 0x00, 0xf0, 0xe0, 0x00, 0x78, 0xe0, 0x00, 0x3c, 0x70, 0x00, 0x3e, 0x70, 0x00, 0x3f, 0x38, 
-	0x00, 0x37, 0x9c, 0x00, 0x33, 0xcf, 0x00, 0x31, 0xe7, 0xc0, 0x38, 0xf3, 0xfc, 0x38, 0x78, 0xfc, 
-	0x1c, 0x3c, 0x38, 0x1e, 0x1e, 0x38, 0x0f, 0x0f, 0x30, 0x07, 0xc7, 0x80, 0x03, 0xff, 0xc0, 0x00, 
-	0xff, 0xe0, 0x00, 0x00, 0xf0, 0x00, 0x00, 0x60
-};
-
-const unsigned char sunny[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x0c, 0x18, 0x30, 0x0e, 
-	0x00, 0x70, 0x07, 0x7e, 0xe0, 0x02, 0xff, 0x40, 0x01, 0xe7, 0x80, 0x03, 0x81, 0xc0, 0x03, 0x81, 
-	0xc0, 0x7b, 0x00, 0xde, 0x7b, 0x00, 0xde, 0x03, 0x81, 0xc0, 0x03, 0x81, 0xc0, 0x01, 0xe7, 0x80, 
-	0x02, 0xff, 0x40, 0x07, 0x7e, 0xe0, 0x0e, 0x00, 0x70, 0x1c, 0x18, 0x30, 0x08, 0x18, 0x00, 0x00, 
-	0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char partly[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x10, 0x0c, 0x18, 0x38, 0x0e, 
-	0x00, 0x70, 0x07, 0x7e, 0xe0, 0x02, 0xff, 0x40, 0x01, 0xe7, 0x80, 0x03, 0x81, 0xc0, 0x03, 0x81, 
-	0xc0, 0x1f, 0x80, 0xde, 0x3f, 0xc0, 0xde, 0x79, 0xe1, 0xc0, 0x70, 0xf9, 0xc0, 0x60, 0x7f, 0x80, 
-	0x60, 0x1f, 0x40, 0x70, 0x0e, 0xe0, 0x78, 0x1c, 0x70, 0x3f, 0xfc, 0x30, 0x1f, 0xf8, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char cloudy[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x01, 
-	0xff, 0x80, 0x03, 0xc7, 0xc0, 0x03, 0x81, 0xc0, 0x07, 0x00, 0xe0, 0x0f, 0x00, 0xe0, 0x3e, 0x00, 
-	0x60, 0x38, 0x00, 0x78, 0x70, 0x00, 0x7c, 0x60, 0x00, 0x1e, 0x60, 0x00, 0x0e, 0x60, 0x00, 0x06, 
-	0x70, 0x00, 0x0e, 0x78, 0x00, 0x1e, 0x3f, 0xff, 0xfc, 0x0f, 0xff, 0xf8, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char rain[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0xff, 0x00, 0x01, 0xe7, 0x80, 0x07, 
-	0x81, 0xc0, 0x1f, 0x81, 0xc0, 0x1c, 0x00, 0xf0, 0x38, 0x00, 0xf8, 0x30, 0x00, 0x3c, 0x30, 0x00, 
-	0x1c, 0x30, 0x00, 0x0c, 0x38, 0x00, 0x1c, 0x1c, 0x00, 0x3c, 0x1f, 0xff, 0xf8, 0x07, 0xff, 0xf0, 
-	0x00, 0x00, 0x00, 0x06, 0x18, 0x60, 0x07, 0x1c, 0x70, 0x07, 0x1c, 0x70, 0x03, 0x8e, 0x38, 0x03, 
-	0x8e, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char showers[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x63, 
-	0x39, 0x80, 0x77, 0x39, 0xc0, 0x73, 0x9d, 0xc0, 0x3b, 0x9c, 0xe0, 0x39, 0xce, 0xe0, 0x1d, 0xce, 
-	0x70, 0x1c, 0xe7, 0x70, 0x0e, 0xe7, 0x38, 0x0e, 0x73, 0xb8, 0x07, 0x73, 0x9c, 0x07, 0x39, 0xdc, 
-	0x03, 0xb9, 0xce, 0x03, 0x9c, 0xee, 0x01, 0x9c, 0xe6, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char snow[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 
-	0x18, 0x60, 0x06, 0x18, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xc3, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x18, 0x60, 0x06, 0x18, 0x60, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xc3, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char storm[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0xff, 0x00, 0x01, 0xe7, 0x80, 0x07, 
-	0x81, 0xc0, 0x1f, 0x81, 0xc0, 0x1c, 0x00, 0xf0, 0x38, 0x00, 0xf8, 0x30, 0x00, 0x3c, 0x30, 0x00, 
-	0x1c, 0x30, 0x00, 0x0c, 0x38, 0x00, 0x1c, 0x1c, 0x00, 0x3c, 0x1f, 0xff, 0xf8, 0x07, 0xff, 0xf0, 
-	0x00, 0x00, 0x00, 0x01, 0xc3, 0x80, 0x01, 0xc7, 0x00, 0x01, 0xe7, 0xc0, 0x03, 0xe1, 0x80, 0x00, 
-	0xc3, 0x00, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char fog[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0xff, 0x00, 0x01, 0xe7, 0x80, 0x07, 
-	0x81, 0xc0, 0x1f, 0x81, 0xc0, 0x1c, 0x00, 0xf0, 0x38, 0x00, 0xf8, 0x30, 0x00, 0x3c, 0x30, 0x00, 
-	0x1c, 0x30, 0x00, 0x0c, 0x38, 0x00, 0x1c, 0x1c, 0x00, 0x3c, 0x1f, 0xff, 0xf8, 0x07, 0xff, 0xf0, 
-	0x00, 0x00, 0x00, 0x07, 0xff, 0x60, 0x07, 0xff, 0x60, 0x00, 0x00, 0x00, 0x03, 0x7f, 0xc0, 0x03, 
-	0x7f, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char unknown[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0xff, 0x00, 0x01, 
-	0xff, 0x80, 0x03, 0xc3, 0xc0, 0x01, 0xc3, 0xc0, 0x00, 0x03, 0xc0, 0x00, 0x03, 0x80, 0x00, 0x07, 
-	0x80, 0x00, 0x0f, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x3c, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x3c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char windpower0[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x66, 0x00, 0x00, 0xc3, 0x00, 0x00, 
-	0xc3, 0x00, 0x00, 0xdb, 0x00, 0x00, 0xdb, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xcb, 0x00, 0x00, 0x66, 
-	0x60, 0x00, 0x7e, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xf8, 0x3f, 0xff, 0xfc, 
-	0x00, 0x00, 0x1c, 0x3f, 0xfc, 0x0c, 0x3f, 0xfc, 0x1c, 0x00, 0x0e, 0x3c, 0x00, 0xee, 0x38, 0x00, 
-	0x7c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char windpower1[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x38, 0x00, 0x00, 0xf8, 0x00, 0x00, 0x78, 0x00, 0x00, 
-	0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 0x00, 0x00, 0x18, 
-	0x60, 0x00, 0x7e, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xf8, 0x3f, 0xff, 0xfc, 
-	0x00, 0x00, 0x1c, 0x3f, 0xfc, 0x0c, 0x3f, 0xfc, 0x1c, 0x00, 0x0e, 0x3c, 0x00, 0xee, 0x38, 0x00, 
-	0x7c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char windpower2[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x63, 0x00, 0x00, 0x03, 0x00, 0x00, 
-	0x03, 0x00, 0x00, 0x06, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x38, 0x00, 0x00, 0x70, 
-	0x60, 0x00, 0x7f, 0x00, 0x00, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xf8, 0x3f, 0xff, 0xfc, 
-	0x00, 0x00, 0x1c, 0x3f, 0xfc, 0x0c, 0x3f, 0xfc, 0x1c, 0x00, 0x0e, 0x3c, 0x00, 0xee, 0x38, 0x00, 
-	0x7c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char windpower3[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x46, 0x00, 0x00, 0x06, 0x00, 0x00, 
-	0x06, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x3e, 0x00, 0x00, 0x07, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x03, 
-	0x60, 0x00, 0x7e, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x00, 0x3f, 0xff, 0xf8, 0x3f, 0xff, 0xfc, 
-	0x00, 0x00, 0x1c, 0x3f, 0xfc, 0x0c, 0x3f, 0xfc, 0x1c, 0x00, 0x0e, 0x3c, 0x00, 0xee, 0x38, 0x00, 
-	0x7c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char drop0[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x7e, 0x00, 0x00, 0xc3, 0x00, 0x01, 0x81, 0x80, 0x03, 0x99, 0xc0, 0x07, 0x3c, 0xe0, 0x07, 0x3c, 
-	0xe0, 0x0f, 0x24, 0xf0, 0x0f, 0x24, 0xf0, 0x0f, 0x24, 0xf0, 0x0f, 0x3c, 0xf0, 0x0f, 0x3c, 0xf0, 
-	0x07, 0x99, 0xe0, 0x07, 0x81, 0xe0, 0x03, 0xc3, 0xc0, 0x01, 0xff, 0x80, 0x00, 0xff, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-
-const unsigned char drop1[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x7e, 0x00, 0x00, 0xe3, 0x00, 0x01, 0xc3, 0x80, 0x03, 0x03, 0xc0, 0x07, 0x03, 0xe0, 0x07, 0x63, 
-	0xe0, 0x0f, 0xe3, 0xf0, 0x0f, 0xe3, 0xf0, 0x0f, 0xe3, 0xf0, 0x0f, 0xe3, 0xf0, 0x0f, 0xe3, 0xf0, 
-	0x07, 0xe3, 0xe0, 0x07, 0x00, 0xe0, 0x03, 0x00, 0xc0, 0x01, 0xff, 0x80, 0x00, 0xff, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char drop2[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x7e, 0x00, 0x00, 0x83, 0x00, 0x01, 0x01, 0x80, 0x03, 0x38, 0xc0, 0x07, 0xf8, 0xe0, 0x07, 0xf8, 
-	0xe0, 0x0f, 0xf1, 0xf0, 0x0f, 0xe1, 0xf0, 0x0f, 0xc3, 0xf0, 0x0f, 0x87, 0xf0, 0x0f, 0x8f, 0xf0, 
-	0x07, 0x1f, 0xe0, 0x07, 0x00, 0x60, 0x03, 0x00, 0x40, 0x01, 0xff, 0x80, 0x00, 0xff, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char drop3[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x7e, 0x00, 0x00, 0x83, 0x00, 0x01, 0x01, 0x80, 0x03, 0xf8, 0xc0, 0x07, 0xf8, 0xe0, 0x07, 0xf8, 
-	0xe0, 0x0f, 0xc3, 0xf0, 0x0f, 0xc1, 0xf0, 0x0f, 0xf0, 0xf0, 0x0f, 0xf8, 0xf0, 0x0f, 0xf8, 0xf0, 
-	0x07, 0x70, 0xe0, 0x07, 0x01, 0xe0, 0x03, 0x03, 0xc0, 0x01, 0xff, 0x80, 0x00, 0xff, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char air[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x80, 0x00, 0x07, 0xc0, 0x00, 
-	0x0e, 0xe0, 0x00, 0x0c, 0x60, 0x00, 0x00, 0x60, 0x3f, 0xff, 0xc0, 0x3f, 0xff, 0xc0, 0x00, 0x00, 
-	0x00, 0x3f, 0xff, 0xf0, 0x3f, 0xff, 0xf8, 0x00, 0x00, 0x0c, 0x3f, 0xf8, 0x0c, 0x3f, 0xfc, 0x0c, 
-	0x00, 0x0c, 0x18, 0x00, 0x6c, 0x10, 0x00, 0x7c, 0x00, 0x00, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char drop[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x40, 0x00, 
-	0x6e, 0xe0, 0x00, 0xc7, 0xf0, 0x01, 0xc3, 0xb0, 0x03, 0x83, 0x18, 0x03, 0x03, 0x18, 0x06, 0x03, 
-	0x38, 0x06, 0x01, 0xf0, 0x0c, 0x00, 0xf0, 0x0c, 0x00, 0x30, 0x0d, 0x80, 0x30, 0x0d, 0x80, 0x30, 
-	0x07, 0xc0, 0x60, 0x06, 0xf8, 0x60, 0x03, 0x38, 0xc0, 0x03, 0xc3, 0xc0, 0x00, 0xff, 0x00, 0x00, 
-	0x3c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-const unsigned char thermo[] PROGMEM = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x66, 0x00, 0x00, 0x66, 0x00, 0x00, 0x66, 0x00, 0x00, 0x66, 0x00, 0x00, 0x66, 0x00, 0x00, 0x66, 
-	0x00, 0x00, 0x66, 0x00, 0x00, 0x66, 0x00, 0x00, 0xe7, 0x00, 0x01, 0xc3, 0x80, 0x01, 0x81, 0x80, 
-	0x01, 0x81, 0x80, 0x01, 0xc3, 0x00, 0x00, 0xe7, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x3c, 0x00, 0x00, 
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
 
 
 struct tm timeinfo; // globalni casovy udaj
@@ -247,9 +59,12 @@ struct DayResult
   uint8_t wind;
   uint8_t rainIntensity;
   float wind_ms;
+  float wind_max;
   float rain_mm;  
   bool valid;
 };
+
+DayResult weatherResult[7] = {0};
 
 
 struct Area 
@@ -288,7 +103,7 @@ struct DayInfo
 #define ICON_FOG            7
 #define ICON_UNKNOWN        255
 
-
+/*
 #define WIND_NONE    0
 #define WIND_LOW     1
 #define WIND_MEDIUM  2
@@ -301,8 +116,9 @@ struct DayInfo
 
 
 #define ICONWIDTH 24
+*/
 
-ICSCalendar ical;
+ICSCalendar calendar;
 
 AsyncWebServer server(80);
 Preferences prefs;
@@ -479,7 +295,6 @@ button:hover {
 }
 
 
-// ===== NVS =====
 void loadConfig() 
 {
     prefs.begin("cfg", true);
@@ -659,25 +474,22 @@ void syncTime()
   Serial.println("Sync time...");
   configTime(3600, 3600, "cz.pool.ntp.org");
   while (!getLocalTime(&timeinfo)) delay(200);
-  int y=timeinfo.tm_year+1900;
-  int m=timeinfo.tm_mon+1;
-  int d=timeinfo.tm_mday;
-  int h=timeinfo.tm_hour;
-  int min=timeinfo.tm_min;
+  //timeinfo.tm_year += 1900;
+  //timeinfo.tm_mon += 1;
   Serial.print("Date: ");
-  Serial.print(d); Serial.print(".");
-  Serial.print(m); Serial.print(".");
-  Serial.println(y);
+  Serial.print(timeinfo.tm_mday); Serial.print(".");
+  Serial.print(timeinfo.tm_mon+1); Serial.print(".");
+  Serial.println(timeinfo.tm_year+1900);
   Serial.print("Time: ");
-  Serial.print(h); Serial.print(":");
-  Serial.println(min);
+  Serial.print(timeinfo.tm_hour); Serial.print(":");
+  Serial.println(timeinfo.tm_min);
 }
 
 
 void downloadICS()
 {
   Serial.println("Downloading ICS...");
-  if (ical.fetchICS(ics)) 
+  if (calendar.fetchICS(ics)) 
   {
     Serial.println("ICS donwloaded");
   } 
@@ -1081,6 +893,27 @@ DayInfo getDayInfo(struct tm timeinfo)
 }
 
 
+struct tm addDays(int daysToAdd)
+{
+    struct tm timeinfo;
+    // vezmi aktuální čas (musíš mít nastavené NTP)
+    if (!getLocalTime(&timeinfo))
+    {
+        // fallback - vrátí prázdný čas
+        struct tm empty = {};
+        return empty;
+    }
+    // převedení na timestamp (sekundy od 1970)
+    time_t t = mktime(&timeinfo);
+    // přičti dny (1 den = 86400 sekund)
+    t += (daysToAdd * 86400);
+    // zpět na struct tm
+    struct tm result;
+    localtime_r(&t, &result);
+    return result;
+}
+
+/*
 bool getWeatherForDay(float lat, float lon, tm timeinfo, DayResult &out) 
 {
   out.valid = false;
@@ -1089,6 +922,8 @@ bool getWeatherForDay(float lat, float lon, tm timeinfo, DayResult &out)
           timeinfo.tm_year + 1900,
           timeinfo.tm_mon + 1,
           timeinfo.tm_mday);
+  Serial.print("GET WEATHER FOR: ");
+  Serial.println(targetDate);
   String url = "https://api.open-meteo.com/v1/forecast?";
   url += "latitude=" + String(lat, 6);
   url += "&longitude=" + String(lon, 6);
@@ -1192,27 +1027,626 @@ bool getWeatherForDay(float lat, float lon, tm timeinfo, DayResult &out)
   }
   return false;
 }
+*/
+
+/* tato
+bool getWeatherWeekAvgWind(float lat, float lon, DayResult out[7])
+{
+  String url = "https://api.open-meteo.com/v1/forecast?";
+  url += "latitude=" + String(lat, 6);
+  url += "&longitude=" + String(lon, 6);
+  url += "&hourly=windspeed_10m";
+  url += "&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,precipitation_probability_max,precipitation_hours";
+  url += "&forecast_days=7&timezone=auto";
+
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(15000);
+
+  int httpCode = http.GET();
+  if (httpCode != 200)
+  {
+    http.end();
+    return false;
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  StaticJsonDocument<8192> doc;
+  if (deserializeJson(doc, payload))
+  {
+    return false;
+  }
+
+  // DAILY
+  JsonArray tMax = doc["daily"]["temperature_2m_max"];
+  JsonArray tMin = doc["daily"]["temperature_2m_min"];
+  JsonArray wCode = doc["daily"]["weathercode"];
+  JsonArray rain = doc["daily"]["precipitation_sum"];
+  JsonArray rainProb = doc["daily"]["precipitation_probability_max"];
+  JsonArray rainHours = doc["daily"]["precipitation_hours"];
+
+  // HOURLY
+  JsonArray hourlyWind = doc["hourly"]["windspeed_10m"];
+
+  // --- průměry větru ---
+  for (int d = 0; d < 7; d++)
+  {
+    float sum = 0;
+    int count = 0;
+
+    // každých 24 hodin = 1 den
+    for (int h = d * 24; h < (d + 1) * 24; h++)
+    {
+      sum += hourlyWind[h].as<float>();
+      count++;
+    }
+
+    float avg_kmh = sum / count;
+
+    out[d].wind_ms = avg_kmh / 3.6; // převod na m/s
+  }
+
+  // --- ostatní data ---
+  for (int i = 0; i < 7; i++)
+  {
+    out[i].valid = true;
+
+    out[i].tMin = tMin[i];
+    out[i].tMax = tMax[i];
+    out[i].rain_mm = rain[i];
+
+    int code = wCode[i];
+    float prob = rainProb[i];
+    float hours = rainHours[i];
+
+    bool willRain = (prob >= 30.0 && hours > 0 && rain[i] > 0.2);
+
+    if (code == 0)
+      out[i].icon = ICON_SUNNY;
+    else if (code <= 2)
+      out[i].icon = willRain ? ICON_SHOWERS : ICON_PARTLY;
+    else if (code == 3)
+      out[i].icon = willRain ? ICON_SHOWERS : ICON_CLOUDY;
+    else if (code == 45 || code == 48)
+      out[i].icon = ICON_FOG;
+    else if (code >= 51 && code <= 67)
+      out[i].icon = willRain ? ICON_RAIN : ICON_CLOUDY;
+    else if (code >= 71 && code <= 77)
+      out[i].icon = ICON_SNOW;
+    else if (code >= 80 && code <= 82)
+      out[i].icon = willRain ? ICON_SHOWERS : ICON_CLOUDY;
+    else if (code == 85 || code == 86)
+      out[i].icon = ICON_SNOW;
+    else if (code >= 95)
+      out[i].icon = ICON_STORM;
+    else
+      out[i].icon = ICON_UNKNOWN;
+  }
+
+  return true;
+}
+*/
+
+
+bool getWeatherWeekAfternoon(float lat, float lon, DayResult out[7])
+{
+  String url = "https://api.open-meteo.com/v1/forecast?";
+  url += "latitude=" + String(lat, 6);
+  url += "&longitude=" + String(lon, 6);
+  url += "&hourly=weathercode,precipitation,precipitation_probability,windspeed_10m";
+  url += "&daily=temperature_2m_max,temperature_2m_min";
+  url += "&forecast_days=7&timezone=auto";
+
+  HTTPClient http;
+  http.begin(url);
+  http.setTimeout(15000);
+
+  int httpCode = http.GET();
+  if (httpCode != 200)
+  {
+    http.end();
+    return false;
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  StaticJsonDocument<10000> doc;
+  if (deserializeJson(doc, payload))
+  {
+    return false;
+  }
+
+  // DAILY (teploty)
+  JsonArray tMax = doc["daily"]["temperature_2m_max"];
+  JsonArray tMin = doc["daily"]["temperature_2m_min"];
+
+  // HOURLY
+  JsonArray hCode = doc["hourly"]["weathercode"];
+  JsonArray hRain = doc["hourly"]["precipitation"];
+  JsonArray hProb = doc["hourly"]["precipitation_probability"];
+  JsonArray hWind = doc["hourly"]["windspeed_10m"];
+
+  // definice odpoledne
+  int startHour = 12;
+  int endHour = 18;
+
+  for (int d = 0; d < 7; d++)
+  {
+    int start = d * 24 + startHour;
+    int end = d * 24 + endHour;
+
+    float maxWind = 0;
+    float rainSum = 0;
+    int rainHits = 0;
+
+    int bestCode = 0;
+    int bestScore = -1;
+
+    for (int h = start; h < end; h++)
+    {
+      float w = hWind[h].as<float>();
+      if (w > maxWind) maxWind = w;
+
+      float r = hRain[h].as<float>();
+      float p = hProb[h].as<float>();
+
+      if (p > 40 && r > 0.1)
+      {
+        rainHits++;
+        rainSum += r;
+      }
+
+      int code = hCode[h].as<int>();
+
+      // váhování důležitosti počasí
+      int score = 1;
+
+      if (code >= 95) score = 6;       // bouřka
+      else if (code >= 80) score = 5;  // přeháňky
+      else if (code >= 60) score = 4;  // déšť
+      else if (code == 3) score = 3;   // zataženo
+      else if (code <= 2) score = 2;   // polojasno
+      else if (code == 0) score = 1;   // jasno
+
+      if (score > bestScore)
+      {
+        bestScore = score;
+        bestCode = code;
+      }
+    }
+
+    // naplnění výstupu
+    out[d].valid = true;
+
+    out[d].tMin = tMin[d].as<float>();
+    out[d].tMax = tMax[d].as<float>();
+
+    out[d].wind_ms = maxWind / 3.6; // km/h → m/s
+    out[d].rain_mm = rainSum;
+
+    bool willRain = (rainHits >= 2);
+
+    // mapování ikon (můžeš doladit)
+    if (bestCode == 0)
+      out[d].icon = ICON_SUNNY;
+    else if (bestCode <= 2)
+      out[d].icon = willRain ? ICON_SHOWERS : ICON_PARTLY;
+    else if (bestCode == 3)
+      out[d].icon = willRain ? ICON_SHOWERS : ICON_CLOUDY;
+    else if (bestCode >= 80)
+      out[d].icon = ICON_SHOWERS;
+    else if (bestCode >= 60)
+      out[d].icon = ICON_RAIN;
+    else if (bestCode >= 95)
+      out[d].icon = ICON_STORM;
+    else
+      out[d].icon = ICON_UNKNOWN;
+  }
+
+  return true;
+}
 
 
 
-void drawDayNameAndNumber()
+void drawDate()
 {
   DayInfo d = getDayInfo(timeinfo);
   display.setFont(&LexendPeta_Medium);
-  display.setTextColor(GxEPD_BLACK);
-  display.setCursor(20, 80);
+  display.setTextColor(GxEPD_RED);
+  display.setCursor(5, 60);
   printCZ(String(d.dayFull).c_str());
-
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(7, 63);
+  printCZ(String(d.dayFull).c_str());
+  //printCZ("Pondělí");
   display.setFont(&IBMPlexSerif_Medium);
-  display.setCursor(320, 150);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(360, 90);
   display.print(String(d.dayNumber).c_str());
-
+  display.setTextColor(GxEPD_RED);
+  display.setCursor(357, 87);
+  display.print(String(d.dayNumber).c_str());
+  //display.print("31");
   display.setFont(&Inter_24pt_Bold);
-  display.setCursor(25, 150);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(10, 120);
   printCZ(String(d.monthName).c_str());
+  //printCZ("LISTOPAD");
+}
+
+void drawNameDay()
+{
+  display.setFont(&OpenSans_Light18);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(10, 160);
+  String textNameDay = "";//"Svátek slaví ";
+  textNameDay += nameDay;
+  printCZ(textNameDay.c_str());
+}
+
+void drawRiseSun()
+{
+  display.drawBitmap(10, 175, sunrise, 32, 32, GxEPD_BLACK);
+  display.setFont(&Lexend_Regular10);
+  display.setTextColor(GxEPD_RED);
+  display.setCursor(50, 200);
+  printCZ(sunRise.c_str());
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(110, 200);
+  printCZ(sunSet.c_str());
+}
+
+String floatToString(float value)
+{
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%.1f", value);
+    return String(buffer);
+}
+
+String getDayShortName(int offsetDays)
+{
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo))
+    {
+        return "?";
+    }
+    // přičtení dnů
+    time_t t = mktime(&timeinfo);
+    t += offsetDays * 86400;
+    struct tm result;
+    localtime_r(&t, &result);
+    const char* days[] = {"Ne", "Po", "Út", "St", "Čt", "Pá", "So"};
+    return String(days[result.tm_wday]);
+}
+
+
+void drawWeatherForDay()
+{
+  int yPos = 110;
+  int xPos = display.width() - 150;
+  int iconSize = 48;
+  int centerX = xPos + (iconSize / 2);
+  String minTemp = floatToString(weatherResult[0].tMin);
+  String maxTemp = floatToString(weatherResult[0].tMax);
+  String wind = floatToString(weatherResult[0].wind_ms);
+  String rain = floatToString(weatherResult[0].rain_mm);
+
+  String totalTemp = minTemp + " / " + maxTemp + " C";
+  String totalOther = wind + " / " + rain;
+
+  int totalTempWidth = getTextWidthCZ(totalTemp.c_str(), &LexendDeca_Regular12);
+  int otherTempWidth = getTextWidthCZ(totalOther.c_str(), &LexendDeca_Regular12);
+
+  display.setFont(&LexendDeca_Regular12);
+  display.setTextColor(GxEPD_BLACK);
+  display.setCursor(xPos, yPos + 65);
+  printCZ(totalTemp.c_str());
+
+  display.setCursor(xPos, yPos + 85);
+  printCZ(totalOther.c_str());
+
+  display.setTextColor(GxEPD_BLACK);
+  if (weatherResult[0].valid)
+  {
+    switch (weatherResult[0].icon)
+    {
+      case ICON_SUNNY:
+      {
+        display.drawBitmap(xPos, yPos, sunny, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_PARTLY:
+      {
+        display.drawBitmap(xPos, yPos, partly, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_CLOUDY:
+      {
+        display.drawBitmap(xPos, yPos, cloudy, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_SHOWERS:
+      {
+        display.drawBitmap(xPos, yPos, showers, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_RAIN:
+      {
+        display.drawBitmap(xPos, yPos, rainy, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_FOG:
+      {
+        display.drawBitmap(xPos, yPos, fog, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_STORM:
+      {
+        display.drawBitmap(xPos, yPos, storm, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_SNOW:
+      {
+        display.drawBitmap(xPos, yPos, snowy, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+      case ICON_UNKNOWN:
+      {
+        display.drawBitmap(xPos, yPos, unknown, iconSize, iconSize, GxEPD_BLACK);
+        break;
+      }
+    }
+  }
+  else
+  {
+    display.drawBitmap(xPos, yPos, unknown, iconSize, iconSize, GxEPD_BLACK);
+  }
 
 }
 
+
+void drawWeather()
+{
+  int yPos = 675;
+  int iconSize = 48;
+  int totalIcons = 6 * iconSize;
+  int spacing = (display.width() - totalIcons) / 7;
+  String minTemp = "";
+  String maxTemp = "";
+  String wind = "";
+  String rain = "";
+
+  for (int i = 0; i < 6; i++)
+  {
+    int xPos = spacing + i * (iconSize + spacing);
+
+    if (weatherResult[i+1].valid)
+    {
+      minTemp = floatToString(weatherResult[i+1].tMin);
+      maxTemp = floatToString(weatherResult[i+1].tMax);
+      wind = floatToString(weatherResult[i+1].wind_ms);
+      rain = floatToString(weatherResult[i+1].rain_mm);
+
+      minTemp += " C";
+      maxTemp += " C";
+      //wind += " ms";
+      //rain += " mm";
+
+      String totalOther = wind + " / " + rain;
+
+      int centerX = xPos + (iconSize / 2);
+
+      display.setTextColor(GxEPD_BLACK);
+      display.setFont(&LexendDeca_Regular12);
+      int shortDayWidth = getTextWidthCZ(getDayShortName(i+1).c_str(), &LexendDeca_Regular12);
+      display.setCursor(centerX - (shortDayWidth / 2), yPos-5);
+      printCZ(getDayShortName(i+1).c_str());
+
+
+
+      display.setFont(&OpenSans_SemiCondensed_Bold10);
+
+      //int minTempWidth = getTextWidthCZ("16.9/30.2", &OpenSans_SemiCondensed_Bold10);
+      int minTempWidth = getTextWidthCZ(minTemp.c_str(), &OpenSans_SemiCondensed_Bold10);
+      int maxTempWidth = getTextWidthCZ(maxTemp.c_str(), &OpenSans_SemiCondensed_Bold10);
+      //int windWidth = getTextWidthCZ(wind.c_str(), &LexendDeca_Light5);
+      //int rainWidth = getTextWidthCZ(rain.c_str(), &LexendDeca_Light5);
+      int totalOtherWidth = getTextWidthCZ(totalOther.c_str(), &OpenSans_Medium8);
+
+      display.setTextColor(GxEPD_BLACK);
+      display.setCursor(centerX - (minTempWidth / 2), yPos + 65);
+      printCZ(minTemp.c_str());
+      //printCZ("16.9/30.2");
+
+      display.setTextColor(GxEPD_RED);
+      display.setCursor(centerX - (maxTempWidth / 2), yPos + 85);
+      printCZ(maxTemp.c_str());
+
+      display.setTextColor(GxEPD_BLACK);
+      display.setFont(&OpenSans_Medium8);
+
+      display.setTextColor(GxEPD_BLACK);
+      display.setCursor(centerX - (totalOtherWidth / 2), yPos + 105);
+      printCZ(totalOther.c_str());
+
+
+      //display.setTextColor(GxEPD_BLACK);
+      //display.setCursor(centerX - (windWidth / 2), yPos + 105);
+      //printCZ(wind.c_str());
+
+      //display.setTextColor(GxEPD_BLACK);
+      //display.setCursor(centerX - (rainWidth / 2), yPos + 125);
+      //printCZ(rain.c_str());
+
+      display.setTextColor(GxEPD_BLACK);
+
+      switch (weatherResult[i+1].icon)
+      {
+        case ICON_SUNNY:
+        {
+          display.drawBitmap(xPos, yPos, sunny, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_PARTLY:
+        {
+          display.drawBitmap(xPos, yPos, partly, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_CLOUDY:
+        {
+          display.drawBitmap(xPos, yPos, cloudy, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_SHOWERS:
+        {
+          display.drawBitmap(xPos, yPos, showers, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_RAIN:
+        {
+          display.drawBitmap(xPos, yPos, rainy, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_FOG:
+        {
+          display.drawBitmap(xPos, yPos, fog, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_STORM:
+        {
+          display.drawBitmap(xPos, yPos, storm, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_SNOW:
+        {
+          display.drawBitmap(xPos, yPos, snowy, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+        case ICON_UNKNOWN:
+        {
+          display.drawBitmap(xPos, yPos, unknown, iconSize, iconSize, GxEPD_BLACK);
+          break;
+        }
+      }
+    }
+    else
+    {
+      display.drawBitmap(xPos, yPos, unknown, iconSize, iconSize, GxEPD_BLACK);
+    }
+  }
+
+}
+
+void drawEventsForDay()
+{
+  String s1, s2, s3;
+  tm tstr = addDays(0);
+  calendar.getEventsForDay(tstr, s1, s2, s3);
+  int xPos = 0;
+  int yPos = 235;
+  if (s1.length() > 0 || s2.length() > 0 || s3.length() > 0)
+  {
+      display.setFont(&Inter_Medium10);
+      display.setTextColor(GxEPD_BLACK);
+      if (s1.length() > 0)
+      {
+        display.setCursor(xPos+28, yPos+12);
+        printCZ(s1.c_str());
+        display.drawBitmap(xPos, yPos-5, point, 24, 24, GxEPD_BLACK);
+      }
+      if (s2.length() > 0)
+      {
+        display.setCursor(xPos+28, yPos+43);
+        printCZ(s2.c_str());
+        display.drawBitmap(xPos, yPos+25, point, 24, 24, GxEPD_BLACK);
+      }
+      if (s3.length() > 0)
+      {
+        display.setCursor(xPos+28, yPos+72);
+        printCZ(s3.c_str());
+        display.drawBitmap(xPos, yPos+55, point, 24, 24, GxEPD_BLACK);
+      }
+  }
+  else
+  {
+      display.setFont(&OpenSans_Light18);
+      display.setTextColor(GxEPD_BLACK);
+      display.drawBitmap(xPos, yPos+25, point, 24, 24, GxEPD_BLACK);
+      display.setCursor(xPos+28, yPos+48);
+      printCZ("DNES BEZ UDÁLOSTÍ");
+  }  
+}
+
+void drawWeekLine()
+{
+  int top = 334;
+  int bottom = 628;
+  int rowHeight = (bottom - top) / 6;
+  int textHeight = getTextHeightCZ(getDayShortName(0).c_str(), &LexendDeca_Regular12);
+  display.setFont(&LexendDeca_Regular12);
+  display.setTextColor(GxEPD_BLACK);
+  for (int i = 1; i < 6; i++)
+  {
+    int y = top + i * rowHeight;
+    display.drawFastHLine(10, y, 460, GxEPD_BLACK);
+  }
+  for ( int i = 1; i < 7; i++)
+  {
+    int y = top + i * rowHeight;
+    display.setCursor(18, y-20);
+    printCZ(getDayShortName(i).c_str());
+  }
+}
+
+void drawWeekEvents()
+{
+  int top = 334;
+  int bottom = 628;
+  int rowHeight = (bottom - top) / 6;
+  String s1, s2, s3;
+  display.setTextColor(GxEPD_BLACK);
+  for (int i = 1; i < 7; i++)
+  {
+    tm tstr = addDays(i);
+    calendar.getEventsForDay(tstr, s1, s2, s3);
+    int y = top + i * rowHeight;
+    if (s1.length() > 0 || s2.length() > 0)
+    {
+      display.setFont(&OpenSans_Medium8);
+      display.setCursor(65, y-30);
+      printCZ(s1.c_str());
+      display.setCursor(65, y-10);
+      printCZ(s2.c_str());
+    }
+    else
+    {
+      display.setFont(&Roboto_Condensed_Regular12);
+      display.setCursor(65, y-20);
+      printCZ("Žádné události");
+    }
+
+  }
+}
+
+void drawLastRefresh()
+{
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo))
+  {
+    return; // když není čas, nic nevykresluj
+  }
+  char timeStr[6]; // HH:MM + \0
+  sprintf(timeStr, "%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min);
+  String text = "Refresh: ";
+  text += timeStr;
+  display.setTextColor(GxEPD_BLACK);
+  display.setFont(&Inter_Medium5);
+  display.setCursor(10, display.height()-1);
+  printCZ(text.c_str());
+}
 
 
 void drawAll()
@@ -1222,391 +1656,63 @@ void drawAll()
     do {
         display.fillScreen(GxEPD_WHITE);
         /// BEGIN DRAW
+        drawDate();
+        drawNameDay();
+        //display.drawFastHLine(10, 220, 460, GxEPD_BLACK);
+        //display.drawFastHLine(10, 222, 460, GxEPD_RED);
+        
+        display.drawFastHLine(10, 330, 460, GxEPD_BLACK);
+        display.drawFastHLine(10, 332, 460, GxEPD_RED);
+        
+        display.drawFastHLine(10, 630, 460, GxEPD_BLACK);
+        display.drawFastHLine(10, 632, 460, GxEPD_RED);
+        
+        display.drawFastHLine(10, 788, 460, GxEPD_BLACK);
+        display.drawFastHLine(10, 790, 460, GxEPD_RED);
 
-        drawDayNameAndNumber();
-
+        display.drawFastVLine(60, 340, 286, GxEPD_RED);
+        
+        drawRiseSun();
+        drawWeather();
+        drawWeatherForDay();
+        drawEventsForDay();
+        drawWeekLine();
+        drawWeekEvents();
+        drawLastRefresh();
         /// END DRAW
     } while (display.nextPage());
 }
 
 
+bool needRefresh = false;
 
-/*
-void drawRow(const Rect& rect, const struct tm& date, const char* event1, const char* event2)
-{
-  Rect partRect[4];
-  const char* daysCZ[] = {
-    "Ne", "Po", "Út", "St", "Čt", "Pá", "So"
-  };  
-  int leftW = (rect.w * 15) / 100;
-  partRect[0] = { rect.x, rect.y, leftW, rect.h };
-  Rect topRect;
-  Rect bottomRect;
-  int split = (partRect[0].h * 60) / 100;
-  topRect.x = partRect[0].x;
-  topRect.y = partRect[0].y;
-  topRect.w = partRect[0].w;
-  topRect.h = split;
-  bottomRect.x = partRect[0].x;
-  bottomRect.y = partRect[0].y + split;
-  bottomRect.w = partRect[0].w;
-  bottomRect.h = partRect[0].h - split;
-  display.setTextColor(GxEPD_BLACK);
-  display.setFont(&CZUbuntuBold12);
-  char dayStr[4];
-  snprintf(dayStr, sizeof(dayStr), "%d", date.tm_mday);  
-  int dayHeightFont = getTextHeightCZ("A", &CZUbuntuBold12);
-  int dayWidthFont = getTextWidthCZ(dayStr, &CZUbuntuBold12);
-  drawTextCentered(topRect, dayStr, dayWidthFont, dayHeightFont);  
-  display.setTextColor(GxEPD_BLACK);
-  display.setFont(&Exo_SemiBold9);
-  int daynameHeightFont = getTextHeightCZ("A", &Exo_SemiBold9);
-  int daynameWidthFont = getTextWidthCZ(daysCZ[date.tm_wday], &Exo_SemiBold9);
-  drawTextCentered(bottomRect, daysCZ[date.tm_wday], daynameWidthFont, daynameHeightFont);
-  Rect right;
-  right.x = rect.x + leftW;
-  right.y = rect.y;
-  right.w = rect.w - leftW;
-  right.h = rect.h;
-  int topH = ICONWIDTH + 2;
-  int remainingH = right.h - topH;
-  int midH = remainingH / 2;
-  int botH = remainingH - midH;
-  partRect[1] = 
-  {
-    right.x,
-    right.y,
-    right.w,
-    topH
-  };
-  partRect[2] = 
-  {
-    right.x,
-    right.y + topH,
-    right.w,
-    midH
-  };
-  partRect[3] = 
-  {
-    right.x,
-    right.y + topH + midH,
-    right.w,
-    botH
-  };
-  display.drawRect(rect.x, rect.y, rect.w, rect.h, GxEPD_RED);
-  display.drawRect(partRect[0].x, partRect[0].y,
-                   partRect[0].w, partRect[0].h,
-                   GxEPD_RED);
-  display.setTextColor(GxEPD_BLACK);
-  display.setFont(&Karla_SemiBold9);
+// poslední zpracované okamžiky
+int lastDay = -1;           // pro půlnoc
+int lastNoonDay = -1;       // pro poledne (aby se spustilo 1× denně)
 
-  int fontHeight = getTextHeightCZ("A", &Karla_SemiBold9);
+// scheduler kalendáře
+unsigned long lastCalendarCheck = 0;
+const unsigned long CALENDAR_INTERVAL = 1UL * 60UL * 1000UL; // 1 minut
+//const unsigned long CALENDAR_INTERVAL = 5UL * 60UL * 1000UL; // 5 minut
 
-  bool hasEvent1 = (event1 != nullptr) && (event1[0] != '\0');
-  bool hasEvent2 = (event2 != nullptr) && (event2[0] != '\0');
+// (volitelné) watchdog refresh – pojistka
+unsigned long lastFullRefresh = 0;
+const unsigned long FULL_REFRESH_INTERVAL = 6UL * 60UL * 60UL * 1000UL; // 6 h
 
-  if (hasEvent1 && hasEvent2)
-  {
-    display.setCursor(
-        partRect[2].x + 2,
-        partRect[2].y + fontHeight
-    );
-    printCZ(event1);
-
-    display.setCursor(
-        partRect[3].x + 2,
-        partRect[3].y + fontHeight
-    );
-    printCZ(event2);
-  }
-
-  else if (hasEvent1 || hasEvent2)
-  {
-    const char* event = hasEvent1 ? event1 : event2;
-
-    int combinedY = partRect[2].y;
-    int combinedHeight = partRect[2].h + partRect[3].h;
-
-    //int yCentered = combinedY + (combinedHeight / 2) + (fontHeight / 2);
-    int yCentered = combinedY + (combinedHeight - fontHeight) / 2 + fontHeight - 2;
-
-    display.setCursor(
-        partRect[2].x + 2,
-        yCentered
-    );
-    printCZ(event);
-  }
-
-  uint16_t colorGx = GxEPD_BLACK;
-  DayResult dayRes;
-  if (getWeatherForDay(lat, lon, date, dayRes))
-  {
-    switch (dayRes.icon) 
-    {
-      case ICON_SUNNY:
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, sunny, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_PARTLY: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, partly, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_CLOUDY: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, cloudy, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_RAIN: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, rain, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_SHOWERS: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, showers, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_SNOW: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, snow, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_STORM: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, storm, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_FOG: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, fog, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-      case ICON_UNKNOWN: 
-      {
-        display.drawBitmap(partRect[1].x+1, partRect[1].y+1, unknown, ICONWIDTH, ICONWIDTH, colorGx);    
-        break;
-      }
-    }
-
-    display.setFont(&Roboto_Condensed_Regular9);
-
-    display.drawBitmap(partRect[1].x + ICONWIDTH + 2, partRect[1].y+1, air, ICONWIDTH, ICONWIDTH, colorGx);
-    display.setTextColor(GxEPD_BLACK);
-    int windHeightFont = getTextHeightCZ("A", &MarkaziText_Regular12);
-    String windText = String(dayRes.wind_ms, 1);// + " m/s";
-    int windWidthFont = getTextWidthCZ(windText.c_str(), &MarkaziText_Regular12);
-    display.setCursor(
-        partRect[1].x + (ICONWIDTH*2) + 2,
-        partRect[1].y + ((partRect[1].h/2)+(windHeightFont/2))
-    );
-    printCZ(windText.c_str());
-
-    display.drawBitmap(partRect[1].x + (ICONWIDTH*2) + windWidthFont + 2, partRect[1].y+1, drop, ICONWIDTH, ICONWIDTH, colorGx);
-    display.setTextColor(GxEPD_BLACK);
-    int dropHeightFont = getTextHeightCZ("A", &MarkaziText_Regular12);
-    String dropText = String(dayRes.rain_mm, 1);// + " mm/den";
-    int dropWidthFont = getTextWidthCZ(dropText.c_str(), &MarkaziText_Regular12);
-    display.setCursor(
-        partRect[1].x + (ICONWIDTH*3) + windWidthFont + 2,
-        partRect[1].y + ((partRect[1].h/2)+(dropHeightFont/2))
-    );
-    printCZ(dropText.c_str());
-
-    display.drawBitmap(partRect[1].x + (ICONWIDTH*3) + windWidthFont + dropWidthFont + 2, partRect[1].y+1, thermo, ICONWIDTH, ICONWIDTH, colorGx);
-    display.setTextColor(GxEPD_BLACK);
-    int thermoHeightFont = getTextHeightCZ("A", &MarkaziText_Regular12);
-    String thermoText = String(dayRes.tMin, 1) + "/" + String(dayRes.tMax, 1) + "C";
-    int thermoWidthFont = getTextWidthCZ(thermoText.c_str(), &MarkaziText_Regular12);
-    display.setCursor(
-        partRect[1].x + (ICONWIDTH*4) + windWidthFont + dropWidthFont + 2,
-        partRect[1].y + ((partRect[1].h/2)+(thermoHeightFont/2))
-    );
-    printCZ(thermoText.c_str());
-  }
-}
-*/
-
-/*
-void drawAll(struct tm timeinfo)
-{
-  const char* namemonth[12] = 
-  {
-    "LEDEN","ÚNOR","BŘEZEN","DUBEN","KVĚTEN","ČERVEN","ČERVENEC","SRPEN","ZÁŘÍ","ŘÍJEN","LISTOPAD","PROSINEC"
-  };
-  
-  display.setFullWindow();
-  
-  display.firstPage();
-  do
-  {
-    display.fillScreen(GxEPD_WHITE);
-    display.setTextColor(GxEPD_RED);
-    display.setFont(&Boldonse_Regular15);
-    int widthMonthText = getTextWidthCZ(namemonth[timeinfo.tm_mon],&Boldonse_Regular15);
-    int xPosMonthText = (display.width() - widthMonthText) / 2;
-    int yPosMonthText = 0+((display.height()/100)*11);
-    display.setCursor(xPosMonthText+1, yPosMonthText+1);
-    printCZ(namemonth[timeinfo.tm_mon]);
-    display.setTextColor(GxEPD_BLACK);
-    display.setCursor(xPosMonthText, yPosMonthText);
-    printCZ(namemonth[timeinfo.tm_mon]);
-    display.setFont(&Roboto_Medium20);
-    int16_t _x1, _y1;
-    uint16_t _w, _h;
-    display.getTextBounds(String(timeinfo.tm_mday), 0, 0, &_x1, &_y1, &_w, &_h);        
-    int xPosDayText = (display.width() - _w) / 2;
-    int yPosDayText = yPosMonthText+_h+((display.height()/100)*4);
-    display.setTextColor(GxEPD_BLACK);
-    display.setCursor(xPosDayText+1, yPosDayText+1);
-    display.print(String(timeinfo.tm_mday));
-    display.setTextColor(GxEPD_RED);
-    display.setCursor(xPosDayText, yPosDayText);
-    display.print(String(timeinfo.tm_mday));
-    int yPosIcons = yPosDayText-_h;
-    display.drawBitmap(0, yPosIcons, sunIcon, ICONWIDTH, ICONWIDTH, GxEPD_BLACK);
-    if (MoonCalc::getMoonStatus(lat, lon))
-    {
-      display.drawBitmap(display.width()-24, yPosIcons, isMoon, ICONWIDTH, ICONWIDTH, GxEPD_BLACK);    
-    }
-    else
-    {
-      display.drawBitmap(display.width()-24, yPosIcons, noMoon, ICONWIDTH, ICONWIDTH, GxEPD_BLACK);    
-    }
-    int y=timeinfo.tm_year+1900;
-    int m=timeinfo.tm_mon+1;
-    int d=timeinfo.tm_mday;
-    int hour = timeinfo.tm_hour;
-    int min = timeinfo.tm_min;
-    display.setFont(&Roboto_Medium);
-    String srStr, ssStr;
-    MoonCalc::CalcSun(lat, lon, srStr, ssStr);
-    int16_t _x2, _y2;
-    uint16_t _w2, _h2;
-    display.getTextBounds(srStr, 0, 0, &_x2, &_y2, &_w2, &_h2);
-    int spacing = ICONWIDTH * 30 / 100;
-    int xPosSunText = ICONWIDTH + spacing;
-    display.setTextColor(GxEPD_RED);
-    display.setCursor(xPosSunText, yPosIcons + _h2);
-    display.print(srStr);
-    display.setTextColor(GxEPD_BLACK);
-    display.setCursor(xPosSunText, yPosIcons + (_h2 * 2) + (_h2 * 40 / 100));
-    display.print(ssStr);
-    String riseStr, setStr;
-    MoonCalc::compute(lat, lon, riseStr, setStr);
-    bool isUp = MoonCalc::getMoonStatus(lat, lon);
-    if (!isUp)
-    {
-      time_t now = time(nullptr) - 12 * 3600;
-      struct tm t;
-      localtime_r(&now, &t);
-      int y = t.tm_year + 1900;
-      int m = t.tm_mon + 1;
-      int d = t.tm_mday;
-      double prev = MoonCalc::moonAltitude(
-          MoonCalc::julianDate(y,m,d,0), lat, lon);
-      double todayRise = -1;
-      for(double h=0.05; h<=24; h+=0.05)
-      {
-        double alt = MoonCalc::moonAltitude(
-            MoonCalc::julianDate(y,m,d,h), lat, lon);
-        if(prev < -0.3 && alt >= -0.3)
-        {
-          double h0 = h - 0.05;
-          double frac = prev / (prev - alt);
-          todayRise = h0 + frac * 0.05;
-          break;
-        }
-        prev = alt;
-      }
-      if (todayRise >= 0)
-      {
-        int tz = t.tm_isdst ? 2 : 1;
-        double rise = fmod(todayRise + tz, 24);
-        riseStr = MoonCalc::toHHMM(rise);
-      }
-    }
-    int xPosMoonText = display.width() - ICONWIDTH - spacing;
-    display.setTextColor(GxEPD_RED);
-    display.setCursor(xPosMoonText-_w2, yPosIcons + _h2);
-    display.print(riseStr);
-    display.setTextColor(GxEPD_BLACK);
-    display.setCursor(xPosMoonText-_w2, yPosIcons + (_h2 * 2) + (_h2 * 40 / 100));
-    display.print(setStr);
-    int yPosNamedayText = yPosIcons + (_h2 * 2) + (_h2 * 40 / 100) + ((display.height()*5)/100);
-    display.setTextColor(GxEPD_BLACK);
-    display.setFont(&CZSpaceMonoRegular12);
-    String namedayStr = String(getNameDayCZ(timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900));
-    int widthNamedayText = getTextWidthCZ(namedayStr.c_str(),&CZSpaceMonoRegular12);
-    int heightNamedayText = getTextHeightCZ(namedayStr.c_str(),&CZSpaceMonoRegular12);
-    int xPosNamedayText = (display.width() - widthNamedayText) / 2;
-    display.setCursor(xPosNamedayText, yPosNamedayText);
-    printCZ(namedayStr.c_str());
-    int yPosHeadLine = yPosNamedayText + ((display.height()*5)/100);
-    display.drawLine(0, yPosHeadLine - 3, display.width(), yPosHeadLine -3, GxEPD_BLACK);
-    display.drawLine(0, yPosHeadLine, display.width(), yPosHeadLine, GxEPD_BLACK);
-    String lastSyncText = "";
-    lastSyncText += String(twoDigits(hour));
-    lastSyncText += ":";
-    lastSyncText += String(twoDigits(min));
-    lastSyncText += " - ";
-    lastSyncText += String(d);
-    lastSyncText += ".";
-    lastSyncText += String(m);
-    lastSyncText += ".";
-    lastSyncText += String(y);
-    display.setFont(&CZProstoOneRegular5);
-    int heightSyncText = getTextHeightCZ(lastSyncText.c_str(),&CZProstoOneRegular5);
-    display.setCursor(0, display.height()-1);
-    printCZ(lastSyncText.c_str());
-    int yPosBottomLine = display.height() - 1 - heightSyncText - 5;
-    display.drawLine(0, yPosBottomLine + 3, display.width(), yPosBottomLine + 3, GxEPD_BLACK);
-    display.drawLine(0, yPosBottomLine, display.width(), yPosBottomLine, GxEPD_BLACK);
-    int areaHeight = yPosBottomLine - yPosHeadLine;
-    display.setFont(&CZPTSansRegular9);
-    int _thFont = getTextHeightCZ("A", &CZPTSansRegular9);
-    int rowMin = ICONWIDTH + 2 + (_thFont * 2) + 4;
-    int rows = areaHeight / rowMin;
-    if (rows < 1) rows = 1;
-    int baseH = areaHeight / rows;
-    int remainder = areaHeight % rows;
-    Rect rectRow[20] = {0};
-    int yy = yPosHeadLine;
-    time_t now;
-    time(&now);
-    struct tm day;
-    localtime_r(&now, &day);    
-    String e1, e2;
-    delay(1000);
-    for (int i = 0; i < rows; i++)
-    {
-        int h = baseH + (i < remainder ? 1 : 0);
-        rectRow[i].x = 0;
-        rectRow[i].y = yy;
-        rectRow[i].w = display.width();
-        rectRow[i].h = h;
-        struct tm tmp = day;
-        addDays(tmp, i);
-        ical.getEventsForDay(tmp, e1, e2);
-        drawRow(rectRow[i], tmp, e1.c_str(), e2.c_str());
-        display.drawLine(0, yy + h, display.width(), yy + h, GxEPD_BLACK);
-        yy += h;
-    }
-  }
-  while(display.nextPage());
-}
-*/
 
 
 void setup()
 {
   Serial.begin(115200);
+
   pinMode(RESET_PIN, INPUT_PULLUP);
   pinMode(CLEAR_PIN, INPUT_PULLUP);
+
   loadConfig();
+
   auto cause = esp_sleep_get_wakeup_cause();
   Serial.println("Wakeup cause: " + String(cause));
+  
   if (digitalRead(CLEAR_PIN) == LOW) 
   {
     delay(3000);
@@ -1616,11 +1722,13 @@ void setup()
       clearConfig();
     }
   }
+
   if (!hasWiFi()) 
   {
     Serial.println("NO WiFi → CONFIG");
     startConfig();
   }
+
   if (cause == ESP_SLEEP_WAKEUP_EXT1)
   {
     Serial.println("Wake by BUTTON");
@@ -1637,6 +1745,7 @@ void setup()
     ESP.restart();
     return;
   }
+
   if (digitalRead(RESET_PIN) == LOW)
   {
     delay(3000);
@@ -1656,9 +1765,21 @@ void setup()
   {
     ESP.restart();
   }
-  syncTime();
-  downloadICS();
 
+  syncTime();
+
+  Serial.println("GET NAMEDAY BEGIN");
+  nameDay = getNameDayCZ(timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900);
+  Serial.println("GET NAMEDAY END");
+
+  Serial.println("CAL SUN");
+  CalcSun(lat, lon, sunRise, sunSet);
+
+  Serial.println("GETTING WEATHER BEGIN");
+  getWeatherWeekAfternoon(lat, lon, weatherResult);
+  Serial.println("GETTING WEATHER END");
+
+  Serial.println("INIT SPI DISPLAY");
   SPI.begin(14, -1, 13, CS_PIN);
 
   pinMode(CS_PIN, OUTPUT);
@@ -1667,11 +1788,21 @@ void setup()
   pinMode(BUSY_PIN, INPUT);
 
   digitalWrite(CS_PIN, HIGH);
-
   digitalWrite(RST_PIN, LOW);
   delay(20);
   digitalWrite(RST_PIN, HIGH);
   delay(20);
+
+  Serial.println("DOWNLOAD CALENDAR BEGIN");
+  if (calendar.fetchICS(ics))
+  {
+    Serial.println("ICS OK");
+    calendar.storeWeek();
+  }
+  else
+  {
+    Serial.println("ICS FAILED!");
+  }
 
   display.init(115200);
 
@@ -1683,42 +1814,156 @@ void setup()
   display.hibernate();
   Serial.println("DRAW DONE");
 
-}
-
-
-void loop()
-{
-  delay(1000);
-}
-
-
-/*
-unsigned long lastRefresh = 0;
-const unsigned long interval = 20000; // 20 sekund
-
-void loop()
-{
-  unsigned long currentMillis = millis();
-
-  if (currentMillis - lastRefresh >= interval)
+  if (getLocalTime(&timeinfo))
   {
-    lastRefresh = currentMillis;
-
-    struct tm timeinfo;
-    if (getLocalTime(&timeinfo))
-    {
-      drawAll(timeinfo);  // tvoje funkce
-    }
+      lastDay = timeinfo.tm_mday;
+      lastNoonDay = timeinfo.tm_mday;
   }
+  else
+  {
+      // fallback – když selže čas
+      lastDay = -1;
+      lastNoonDay = -1;
+  }  
 
-  // sem můžeš dát další kód (BLE, WiFi, atd.)
 }
-*/
 
 
 
+bool isNewDay(const struct tm& t)
+{
+    if (lastDay == -1)  // první průchod po bootu
+    {
+        lastDay = t.tm_mday;
+        return true;    // klidně inicializační refresh
+    }
+
+    if (t.tm_mday != lastDay)
+    {
+        lastDay = t.tm_mday;
+        return true;
+    }
+
+    return false;
+}
 
 
+bool isNoonTrigger(const struct tm& t)
+{
+    // spustíme kdykoliv po 12:00, ale jen jednou za den
+    if (t.tm_hour >= 12)
+    {
+        if (lastNoonDay != t.tm_mday)
+        {
+            lastNoonDay = t.tm_mday;
+            return true;
+        }
+    }
+    return false;
+}
+
+
+bool shouldCheckCalendar(unsigned long now)
+{
+    if (now - lastCalendarCheck >= CALENDAR_INTERVAL)
+    {
+        lastCalendarCheck = now;
+        return true;
+    }
+    return false;
+}
+
+
+void loop()
+{
+    //struct tm timeinfo;
+
+    // --- čas ---
+    if (!getLocalTime(&timeinfo))
+    {
+        // NTP/WiFi problém → nic nespouštěj, jen čekej
+        delay(1000);
+        return;
+    }
+
+    unsigned long now = millis();
+
+    // =========================
+    // 🕛 1) ZMĚNA DNE
+    // =========================
+    if (isNewDay(timeinfo))
+    {
+        Serial.println("NEW DAY DETECT!");
+        needRefresh = true;
+    }
+
+    // =========================
+    // 🕛 2) POLEDNE
+    // =========================
+    if (isNoonTrigger(timeinfo))
+    {
+        Serial.println("NOON DETECT!");
+        needRefresh = true;
+    }
+
+    // =========================
+    // 📅 3) KALENDÁŘ
+    // =========================
+    if (shouldCheckCalendar(now))
+    {
+        Serial.println("CALENDAR!");
+        if (calendar.fetchICS(ics))
+        {
+            if (calendar.isWeekChanged())
+            {
+                Serial.println("CALENDAR CHANGE DETECT!");
+                calendar.storeWeek();
+                needRefresh = true;
+            }
+        }
+    }
+
+    // =========================
+    // 🛟 4) WATCHDOG REFRESH (volitelné)
+    // =========================
+    if (now - lastFullRefresh >= FULL_REFRESH_INTERVAL)
+    {
+        Serial.println("WATCHDOG RUN");
+        lastFullRefresh = now;
+        needRefresh = true;
+    }
+
+    // =========================
+    // 🖥️ 5) VYKRESLENÍ
+    // =========================
+    if (needRefresh)
+    {
+        needRefresh = false;
+        Serial.println("TOTAL REFRESHING");
+
+        syncTime();
+
+        Serial.println("GET NAMEDAY BEGIN");
+        nameDay = getNameDayCZ(timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900);
+        Serial.println("GET NAMEDAY END");
+
+        Serial.println("CAL SUN");
+        CalcSun(lat, lon, sunRise, sunSet);
+
+        Serial.println("GETTING WEATHER BEGIN");
+        getWeatherWeekAfternoon(lat, lon, weatherResult);
+        Serial.println("GETTING WEATHER END");
+
+        display.init(115200);
+
+        Serial.println("DRAWING...");
+        drawAll();
+        Serial.println("DRAW DONE");
+
+        display.hibernate();
+        Serial.println("TOTAL REFRESHING DONE");
+    }
+}
 
 
 
